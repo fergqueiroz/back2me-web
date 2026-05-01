@@ -8,8 +8,19 @@
     "start": "next start"
   },
   "dependencies": {
+    "@easypost/api": "^8.8.0",
+    "@paypal/react-paypal-js": "^9.1.1",
+    "@stripe/react-stripe-js": "^6.1.0",
+    "@stripe/stripe-js": "^9.1.0",
+    "@supabase/ssr": "^0.10.2",
+    "@supabase/supabase-js": "^2.103.2",
+    "@twilio/voice-sdk": "^2.18.1",
+    "dotenv": "^17.4.2",
     "next": "16.2.2",
+    "qrcode.react": "^4.2.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "stripe": "^22.0.1",
+    "twilio": "^5.13.1"
   }
 }
