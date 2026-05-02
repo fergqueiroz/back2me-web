@@ -1,9 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
+
+function ShippingSuccessWatcher({ onSuccess }) {
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get('shipping_success') === 'true') {
+      onSuccess();
+    }
+  }, [searchParams]);
+  return null;
+}
 
 export default function TagsPage() {
   const [tags, setTags] = useState([]);
@@ -11,15 +21,9 @@ export default function TagsPage() {
   const [loading, setLoading] = useState(true);
   const [shippingSuccess, setShippingSuccess] = useState(false);
   const supabase = createClient();
-  const searchParams = useSearchParams();
 
   useEffect(() => {
     loadData();
-    if (searchParams.get('shipping_success') === 'true') {
-      setShippingSuccess(true);
-      // Auto-dismiss after 8 seconds
-      setTimeout(() => setShippingSuccess(false), 8000);
-    }
   }, []);
 
   async function loadData() {
@@ -69,6 +73,13 @@ export default function TagsPage() {
 
   return (
     <div className="dash-page">
+      <Suspense fallback={null}>
+        <ShippingSuccessWatcher onSuccess={() => {
+          setShippingSuccess(true);
+          setTimeout(() => setShippingSuccess(false), 8000);
+        }} />
+      </Suspense>
+
       {/* ── Shipping Payment Success Banner ── */}
       {shippingSuccess && (
         <div style={{ background: '#ecfdf5', border: '1px solid #6ee7b7', borderRadius: '12px', padding: '16px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
