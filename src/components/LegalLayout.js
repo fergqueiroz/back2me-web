@@ -22,11 +22,8 @@ export default function LegalLayout({ children, title, subtitle }) {
             <li><a href="/#pricing">Plans</a></li>
           </ul>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <Link href="/login" style={{ fontSize: '14px', fontWeight: '600', color: 'var(--navy)', textDecoration: 'none' }}>
+            <Link href="/login" className="btn btn-orange nav-cta">
               Login
-            </Link>
-            <Link href="/#pricing" className="btn btn-orange nav-cta">
-              Get Protected
             </Link>
           </div>
         </div>

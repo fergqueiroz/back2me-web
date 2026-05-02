@@ -27,12 +27,9 @@ export default function Home() {
             <li><a href="#pricing">Plans</a></li>
           </ul>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <Link href="/login" style={{ fontSize: '14px', fontWeight: '600', color: 'var(--navy)', textDecoration: 'none' }}>
+            <Link href="/login" className="btn btn-orange nav-cta" id="nav-cta">
               Login
             </Link>
-            <button className="btn btn-orange nav-cta" id="nav-cta">
-              Get Protected
-            </button>
           </div>
         </div>
       </nav>
