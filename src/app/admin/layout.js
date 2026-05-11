@@ -38,6 +38,7 @@ export default function AdminLayout({ children }) {
     { href: '/admin/finance', label: 'Finance', icon: '💰' },
     { href: '/admin/tax', label: 'Tax', icon: '🧾' },
     { href: '/admin/tags', label: 'Registered Tags', icon: '🏷️' },
+    { href: '/admin/qr-generator', label: 'QR Generator', icon: '🖨️' },
     { href: '/admin/chats', label: 'Active Chats', icon: '💬' },
     { href: '/admin/scans', label: 'Scan Feed', icon: '📡' },
     { href: '/admin/logs', label: 'Audit Logs', icon: '📋' },

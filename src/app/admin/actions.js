@@ -255,3 +255,56 @@ export async function adjustInventory(skuId, changeAmount, actionType, notes) {
     return { error: err.message };
   }
 }
+
+/**
+ * Generates bulk QR codes and inserts them into the tags table.
+ */
+export async function generateQRTags(type, quantity) {
+  const supabase = createAdminClient();
+  
+  try {
+    const adminProfile = await requireAdminAuth();
+    const count = parseInt(quantity, 10);
+    if (!count || count <= 0 || count > 500) {
+      throw new Error("Invalid quantity. Must be between 1 and 500.");
+    }
+
+    const validTypes = ['wristband', 'luggage_tag', 'pet_tag', 'sticker'];
+    if (!validTypes.includes(type)) {
+      throw new Error("Invalid tag type.");
+    }
+
+    const newTags = [];
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const numbers = '0123456789';
+
+    for (let i = 0; i < count; i++) {
+      const lPart = Array.from({length: 3}, () => letters[Math.floor(Math.random() * letters.length)]).join('');
+      const nPart = Array.from({length: 3}, () => numbers[Math.floor(Math.random() * numbers.length)]).join('');
+      newTags.push({
+        qr_code: `B2M-${lPart}${nPart}`,
+        type: type,
+        status: 'unregistered'
+      });
+    }
+
+    const { data: insertedTags, error } = await supabase
+      .from('tags')
+      .insert(newTags)
+      .select('id, qr_code, type');
+
+    if (error) throw error;
+
+    await logAudit(supabase, adminProfile.id, 'BULK_GENERATE_TAGS', 'tags', null, {
+      type: type,
+      quantity: count
+    });
+
+    revalidatePath(`/admin/tags`);
+    return { success: true, tags: insertedTags };
+
+  } catch (err) {
+    console.error('generateQRTags error:', err);
+    return { error: err.message };
+  }
+}
