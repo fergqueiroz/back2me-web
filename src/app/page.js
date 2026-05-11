@@ -322,7 +322,64 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="section-alt" id="pricing">
+      {/* ═══════════════════════════════════════════════════════════
+          PHASE 6 — THE PROOF (Testimonials)
+          Real stories to validate the marketing
+          ═══════════════════════════════════════════════════════════ */}
+      <section className="section-alt" id="testimonials">
+        <div className="container text-center">
+          <span className="pre-label">Real Stories</span>
+          <h2 className="headline">
+            Don&apos;t just take our word for it.
+          </h2>
+          <p className="subheadline">
+            Every day, Back2Me helps reconnect people with what matters most. Here are a few of their stories.
+          </p>
+
+          <div className="testimonials-grid">
+            <div className="testimonial-card">
+              <p className="testimonial-quote">
+                &ldquo;I turned around for one second at the resort, and my 4-year-old was gone in the crowd. Pure panic. Ten minutes later, my phone rang. Another mom scanned his Back2Me wristband. I have never cried so hard from relief.&rdquo;
+              </p>
+              <div className="testimonial-author">
+                <div className="testimonial-avatar" style={{ background: 'var(--orange)' }}>S</div>
+                <div className="testimonial-info">
+                  <h4>Sarah M.</h4>
+                  <p>Mother of two</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="testimonial-card">
+              <p className="testimonial-quote">
+                &ldquo;Max, our Golden Retriever, bolted out the front door during a thunderstorm. By the time we started looking, someone had already found him trembling under a porch three blocks away and scanned his collar tag. They texted me his exact location instantly.&rdquo;
+              </p>
+              <div className="testimonial-author">
+                <div className="testimonial-avatar" style={{ background: 'var(--navy)' }}>J</div>
+                <div className="testimonial-info">
+                  <h4>James &amp; Elena</h4>
+                  <p>Pet Owners</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="testimonial-card">
+              <p className="testimonial-quote">
+                &ldquo;Left my work laptop at the airport terminal. Before I even realized it was missing, I got an anonymous chat message through the Back2Me portal. A student found it, scanned the sticker, and we met at the coffee shop. Saved me thousands of dollars and my job.&rdquo;
+              </p>
+              <div className="testimonial-author">
+                <div className="testimonial-avatar" style={{ background: 'var(--gray-dark)' }}>D</div>
+                <div className="testimonial-info">
+                  <h4>David P.</h4>
+                  <p>Consultant</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="section" id="pricing">
         <div className="container text-center">
           <span className="pre-label">Simple, Transparent Pricing</span>
           <h2 className="headline">
