@@ -89,9 +89,9 @@ export default function Home() {
           </div>
 
           <div className="btn-group" style={{ marginTop: '48px' }}>
-            <button className="btn btn-navy" id="hero-cta-primary">
+            <a href="#pricing" className="btn btn-navy" id="hero-cta-primary">
               Secure Your World Today
-            </button>
+            </a>
           </div>
         </div>
       </section>
