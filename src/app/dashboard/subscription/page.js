@@ -16,18 +16,22 @@ export default function SubscriptionPage() {
   }, []);
 
   async function loadData() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    const [profileRes, tagsRes] = await Promise.all([
-      supabase.from('profiles').select('*').eq('id', user.id).single(),
-      supabase.from('tags').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'active')
-    ]);
+      const [profileRes, tagsRes] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', user.id).single(),
+        supabase.from('tags').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'active')
+      ]);
 
-    if (profileRes.data) setProfile(profileRes.data);
-    if (tagsRes.count !== null) setTagsCount(tagsRes.count);
-    
-    setLoading(false);
+      if (profileRes.data) setProfile(profileRes.data);
+      if (tagsRes.count !== null) setTagsCount(tagsRes.count);
+    } catch (err) {
+      console.error('Failed to load subscription data:', err);
+    } finally {
+      setLoading(false);
+    }
   }
 
   const handleManageBilling = async () => {

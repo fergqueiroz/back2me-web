@@ -37,7 +37,10 @@ BEGIN
   );
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- Revoke public execution of security definer function to prevent unauthorized access
+REVOKE ALL ON FUNCTION public.handle_new_user() FROM public;
 
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
@@ -412,3 +415,38 @@ ALTER TABLE marketing_sessions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public can insert marketing session" ON marketing_sessions FOR INSERT TO public WITH CHECK (true);
 CREATE POLICY "Admins bypass RLS for marketing" ON marketing_sessions FOR ALL USING (false);
 
+
+-- ═══════════════════════════════════════════════════════════════
+-- 14. INQUIRIES (Admin only)
+-- ═══════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS inquiries (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  email text NOT NULL,
+  message text NOT NULL,
+  read boolean DEFAULT false,
+  created_at timestamptz DEFAULT now()
+);
+
+-- Enable RLS
+ALTER TABLE inquiries ENABLE ROW LEVEL SECURITY;
+
+-- Only admins can access inquiries
+DROP POLICY IF EXISTS "Admins manage inquiries" ON inquiries;
+
+CREATE POLICY "Admins manage inquiries" ON inquiries
+  FOR ALL TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles 
+      WHERE profiles.id = auth.uid() 
+      AND profiles.role = 'admin'
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM profiles 
+      WHERE profiles.id = auth.uid() 
+      AND profiles.role = 'admin'
+    )
+  );
