@@ -257,7 +257,7 @@ export async function adjustInventory(skuId, changeAmount, actionType, notes) {
 }
 
 /**
- * Generates bulk QR codes and inserts them into the tags table.
+ * Generates bulk QR codes with guaranteed 100% global uniqueness against all historical tags.
  */
 export async function generateQRTags(type, quantity) {
   const supabase = createAdminClient();
@@ -274,37 +274,84 @@ export async function generateQRTags(type, quantity) {
       throw new Error("Invalid tag type.");
     }
 
+    // 1. Fetch all existing qr_codes from database to ensure no collision ever occurs against historical records
+    const { data: existingTags, error: fetchError } = await supabase
+      .from('tags')
+      .select('qr_code');
+
+    if (fetchError) throw fetchError;
+
+    const existingCodeSet = new Set((existingTags || []).map(t => t.qr_code));
+
     const newTags = [];
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     const numbers = '0123456789';
 
-    for (let i = 0; i < count; i++) {
+    let attempts = 0;
+    const maxAttempts = count * 200;
+
+    while (newTags.length < count && attempts < maxAttempts) {
+      attempts++;
       const lPart = Array.from({length: 3}, () => letters[Math.floor(Math.random() * letters.length)]).join('');
       const nPart = Array.from({length: 3}, () => numbers[Math.floor(Math.random() * numbers.length)]).join('');
-      newTags.push({
-        qr_code: `B2M-${lPart}${nPart}`,
-        type: type,
-        status: 'unregistered'
-      });
+      const candidateCode = `B2M-${lPart}${nPart}`;
+
+      // Guarantee code has NEVER been generated before in history or in current batch
+      if (!existingCodeSet.has(candidateCode)) {
+        existingCodeSet.add(candidateCode); // prevent duplicates within current run & future checks
+        newTags.push({
+          qr_code: candidateCode,
+          type: type,
+          status: 'unregistered'
+        });
+      }
+    }
+
+    if (newTags.length < count) {
+      throw new Error("Unable to generate the requested quantity of unique codes. Try again.");
     }
 
     const { data: insertedTags, error } = await supabase
       .from('tags')
       .insert(newTags)
-      .select('id, qr_code, type');
+      .select('id, qr_code, type, status, created_at');
 
     if (error) throw error;
 
     await logAudit(supabase, adminProfile.id, 'BULK_GENERATE_TAGS', 'tags', null, {
       type: type,
-      quantity: count
+      quantity: count,
+      codes_count: insertedTags.length
     });
 
     revalidatePath(`/admin/tags`);
+    revalidatePath(`/admin/qr-generator`);
     return { success: true, tags: insertedTags };
 
   } catch (err) {
     console.error('generateQRTags error:', err);
     return { error: err.message };
+  }
+}
+
+/**
+ * Fetches historical generated QR codes for administrative tracking.
+ */
+export async function getQRGeneratorHistory(limit = 200) {
+  const supabase = createAdminClient();
+  
+  try {
+    await requireAdminAuth();
+    const { data, error } = await supabase
+      .from('tags')
+      .select('id, qr_code, type, status, created_at, assigned_to')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    return { success: true, tags: data || [] };
+  } catch (err) {
+    console.error('getQRGeneratorHistory error:', err);
+    return { error: err.message, tags: [] };
   }
 }
