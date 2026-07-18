@@ -325,31 +325,66 @@
 }
 
 @media print {
+  html,
   body {
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
     background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
-  .no-print, .admin-sidebar, .admin-topbar {
+
+  .no-print,
+  .admin-sidebar,
+  .admin-topbar,
+  .admin-overlay {
     display: none !important;
   }
-  .admin-main {
-    margin-left: 0 !important;
-  }
-  .admin-content {
+
+  .admin-layout,
+  .admin-main,
+  .admin-content,
+  .admin-page,
+  .qr-generator-page,
+  .qr-results-section {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    width: 100% !important;
+    position: static !important;
+    overflow: visible !important;
     padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
   }
-  .qr-generator-page {
-    padding: 0 !important;
-  }
+
   .qr-print-grid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    width: 100%;
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 16px !important;
+    width: 100% !important;
+    overflow: visible !important;
+    page-break-inside: auto;
   }
+
   .qr-print-item {
-    break-inside: avoid;
-    border: 1px solid #000;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    border: 1px dashed #4b5563 !important;
+    background: white !important;
+    padding: 12px !important;
+    box-sizing: border-box !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
+
   @page {
-    margin: 1cm;
+    size: A4 portrait;
+    margin: 12mm;
   }
 }
