@@ -163,7 +163,7 @@ export default function QRGeneratorPage() {
                 {tags.map((tag) => (
                   <div key={tag.id} className="qr-print-item">
                     <QRCodeSVG 
-                      value={`https://www.back2meglobal.com/scan/${tag.id}`} 
+                      value={`https://www.back2meglobal.com/scan/${tag.qr_code}`} 
                       size={120}
                       level="Q"
                       includeMargin={true}
