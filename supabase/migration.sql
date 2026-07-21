@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS tags (
   type TEXT NOT NULL CHECK (type IN ('wristband', 'pet_tag', 'luggage_tag', 'sticker')),
   color TEXT CHECK (color IN ('orange', 'navy')),
   size TEXT CHECK (size IN ('1x1', '2x2')),
-  status TEXT DEFAULT 'unregistered' CHECK (status IN ('unregistered', 'active', 'inactive')),
+  status TEXT DEFAULT 'unregistered' CHECK (status IN ('unregistered', 'generated', 'manufactured', 'in_stock', 'sold', 'active', 'inactive')),
   assigned_to TEXT,
   category TEXT CHECK (category IN ('child', 'pet', 'luggage', 'personal', 'equipment', 'other')),
   owner_message TEXT,
@@ -66,6 +66,11 @@ CREATE TABLE IF NOT EXISTS tags (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   activated_at TIMESTAMPTZ
 );
+
+-- Expand tags_status_check constraint for existing databases
+ALTER TABLE tags DROP CONSTRAINT IF EXISTS tags_status_check;
+ALTER TABLE tags ADD CONSTRAINT tags_status_check 
+  CHECK (status IN ('unregistered', 'generated', 'manufactured', 'in_stock', 'sold', 'active', 'inactive'));
 
 -- ── 3. EMERGENCY CONTACTS ────────────────────────────────────
 CREATE TABLE IF NOT EXISTS emergency_contacts (

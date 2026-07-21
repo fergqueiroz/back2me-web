@@ -392,7 +392,11 @@ export async function updateTagStatusBulk(tagIds, newStatus) {
     return { success: true, count: data.length, updated: data };
   } catch (err) {
     console.error('updateTagStatusBulk error:', err);
-    return { error: err.message };
+    let errorMsg = err.message;
+    if (errorMsg.includes('tags_status_check') || errorMsg.includes('check constraint')) {
+      errorMsg = "Database constraint error ('tags_status_check'). Please run the 1-line SQL query in Supabase SQL Editor to allow 'manufactured', 'in_stock', and 'sold' statuses.";
+    }
+    return { error: errorMsg };
   }
 }
 
@@ -450,6 +454,10 @@ export async function scanAndUpdateTagStatus(scannedText, targetStatus) {
     };
   } catch (err) {
     console.error('scanAndUpdateTagStatus error:', err);
-    return { error: err.message };
+    let errorMsg = err.message;
+    if (errorMsg.includes('tags_status_check') || errorMsg.includes('check constraint')) {
+      errorMsg = "Database constraint error ('tags_status_check'). Please run the 1-line SQL query in Supabase SQL Editor to allow new statuses.";
+    }
+    return { error: errorMsg };
   }
 }
