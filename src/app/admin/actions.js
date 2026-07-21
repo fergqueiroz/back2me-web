@@ -337,7 +337,7 @@ export async function generateQRTags(type, quantity) {
 /**
  * Fetches historical generated QR codes for administrative tracking.
  */
-export async function getQRGeneratorHistory(limit = 200) {
+export async function getQRGeneratorHistory(limit = 2000) {
   const supabase = createAdminClient();
   
   try {
@@ -353,5 +353,103 @@ export async function getQRGeneratorHistory(limit = 200) {
   } catch (err) {
     console.error('getQRGeneratorHistory error:', err);
     return { error: err.message, tags: [] };
+  }
+}
+
+/**
+ * Bulk updates status for multiple tags (e.g. marking selected/all as 'manufactured', 'in_stock', 'sold').
+ */
+export async function updateTagStatusBulk(tagIds, newStatus) {
+  const supabase = createAdminClient();
+
+  try {
+    const adminProfile = await requireAdminAuth();
+    const validStatuses = ['generated', 'unregistered', 'manufactured', 'in_stock', 'sold', 'active'];
+    if (!validStatuses.includes(newStatus)) {
+      throw new Error(`Invalid status: ${newStatus}`);
+    }
+
+    if (!Array.isArray(tagIds) || tagIds.length === 0) {
+      throw new Error("No tags selected.");
+    }
+
+    const { data, error } = await supabase
+      .from('tags')
+      .update({ status: newStatus })
+      .in('id', tagIds)
+      .select('id, qr_code, status');
+
+    if (error) throw error;
+
+    await logAudit(supabase, adminProfile.id, 'BULK_UPDATE_TAG_STATUS', 'tags', null, {
+      count: data.length,
+      new_status: newStatus
+    });
+
+    revalidatePath('/admin/tags');
+    revalidatePath('/admin/qr-generator');
+
+    return { success: true, count: data.length, updated: data };
+  } catch (err) {
+    console.error('updateTagStatusBulk error:', err);
+    return { error: err.message };
+  }
+}
+
+/**
+ * Scans a single QR code or URL and updates its status (e.g. for fast scanner in_stock / sold checking).
+ */
+export async function scanAndUpdateTagStatus(scannedText, targetStatus) {
+  const supabase = createAdminClient();
+
+  try {
+    await requireAdminAuth();
+    const validStatuses = ['generated', 'unregistered', 'manufactured', 'in_stock', 'sold', 'active'];
+    if (!validStatuses.includes(targetStatus)) {
+      throw new Error(`Invalid target status: ${targetStatus}`);
+    }
+
+    if (!scannedText || typeof scannedText !== 'string') {
+      throw new Error("Invalid scanned text.");
+    }
+
+    let identifier = scannedText.trim();
+    if (identifier.includes('/scan/')) {
+      identifier = identifier.split('/scan/').pop().split('/')[0];
+    }
+
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
+
+    const query = supabase.from('tags').select('id, qr_code, type, status, assigned_to');
+    const { data: tag, error: fetchErr } = isUuid
+      ? await query.eq('id', identifier).maybeSingle()
+      : await query.eq('qr_code', identifier).maybeSingle();
+
+    if (fetchErr || !tag) {
+      throw new Error(`Tag "${identifier}" not found in database.`);
+    }
+
+    const previousStatus = tag.status;
+
+    const { data: updatedTag, error: updateErr } = await supabase
+      .from('tags')
+      .update({ status: targetStatus })
+      .eq('id', tag.id)
+      .select('id, qr_code, type, status, created_at')
+      .single();
+
+    if (updateErr) throw updateErr;
+
+    revalidatePath('/admin/tags');
+    revalidatePath('/admin/qr-generator');
+
+    return {
+      success: true,
+      tag: updatedTag,
+      previousStatus
+    };
+  } catch (err) {
+    console.error('scanAndUpdateTagStatus error:', err);
+    return { error: err.message };
   }
 }
