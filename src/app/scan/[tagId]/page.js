@@ -9,11 +9,10 @@ import './scan.css';
 export async function generateMetadata({ params }) {
   const { tagId } = await params;
   const supabase = await createClient();
-  const { data: tag } = await supabase
-    .from('tags')
-    .select('assigned_to, type, status')
-    .eq('id', tagId)
-    .single();
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tagId);
+  const { data: tag } = isUuid 
+    ? await supabase.from('tags').select('assigned_to, type, status').eq('id', tagId).single()
+    : await supabase.from('tags').select('assigned_to, type, status').eq('qr_code', tagId).single();
 
   if (!tag || tag.status !== 'active') {
     return { title: 'Tag Not Found | Back2Me Global' };
@@ -29,15 +28,16 @@ export default async function ScanPage({ params }) {
   const { tagId } = await params;
   const supabase = await createClient();
 
-  // 1. Fetch tag (RLS will only let us fetch if status = 'active' or if it's unregistered)
-  const { data: tag, error } = await supabase
-    .from('tags')
-    .select(`
-      id, qr_code, type, color, assigned_to, category, owner_message, medical_info, status, photo_url,
-      profiles (name, avatar_url)
-    `)
-    .eq('id', tagId)
-    .single();
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tagId);
+  const selectFields = `
+    id, qr_code, type, color, assigned_to, category, owner_message, medical_info, status, photo_url,
+    profiles (name, avatar_url)
+  `;
+
+  // 1. Fetch tag by UUID or QR Code String
+  const { data: tag, error } = isUuid
+    ? await supabase.from('tags').select(selectFields).eq('id', tagId).single()
+    : await supabase.from('tags').select(selectFields).eq('qr_code', tagId).single();
 
   if (error || !tag) {
     notFound();
