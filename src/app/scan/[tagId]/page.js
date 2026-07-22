@@ -43,7 +43,8 @@ export default async function ScanPage({ params }) {
     notFound();
   }
 
-  if (tag.status === 'unregistered') {
+  const isUnactivated = ['unregistered', 'generated', 'manufactured', 'in_stock', 'sold'].includes(tag.status);
+  if (isUnactivated) {
     return (
       <div className="scan-public-page">
         <div className="scan-container text-center">

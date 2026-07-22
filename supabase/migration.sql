@@ -123,10 +123,8 @@ CREATE POLICY "Users update own profile" ON profiles
 ALTER TABLE tags ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Owners manage own tags" ON tags
   FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "Anyone can read active tags" ON tags
-  FOR SELECT USING (status = 'active');
-CREATE POLICY "Anyone can read unregistered tags" ON tags
-  FOR SELECT USING (status = 'unregistered');
+CREATE POLICY "Anyone can read all tags" ON tags
+  FOR SELECT USING (true);
 
 -- Emergency Contacts
 ALTER TABLE emergency_contacts ENABLE ROW LEVEL SECURITY;
@@ -455,3 +453,11 @@ CREATE POLICY "Admins manage inquiries" ON inquiries
       AND profiles.role = 'admin'
     )
   );
+
+-- Drop old restricted read policies and replace with the all-tags select policy
+DROP POLICY IF EXISTS "Anyone can read active tags" ON tags;
+DROP POLICY IF EXISTS "Anyone can read unregistered tags" ON tags;
+DROP POLICY IF EXISTS "Anyone can read all tags" ON tags;
+
+CREATE POLICY "Anyone can read all tags" ON tags
+  FOR SELECT USING (true);
