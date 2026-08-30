@@ -196,7 +196,8 @@ export default function QRGeneratorPage() {
     const res = await revertOrDeleteScannedTag(log.code, log.prevStatus);
     if (res.success) {
       playBeep(440, 'sawtooth', 0.2);
-      setScanLogs(prev => prev.filter(l => l.id !== log.id));
+      // Remove all log entries for this QR code so it can be scanned again freely
+      setScanLogs(prev => prev.filter(l => l.code.toUpperCase() !== log.code.toUpperCase()));
       setHistory(prev => prev.map(t => t.qr_code === log.code ? { ...t, status: res.restoredStatus } : t));
       fetchHistory();
     } else {

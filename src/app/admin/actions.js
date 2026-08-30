@@ -627,9 +627,10 @@ export async function revertOrDeleteScannedTag(identifier, previousStatus) {
       ? await supabase.from('tags').select('*').eq('id', identifier).single()
       : await supabase.from('tags').select('*').eq('qr_code', identifier).single();
 
-    if (fetchErr || !tag) throw new Error(`Tag "${identifier}" not found.`);
-
-    const targetStatus = previousStatus && previousStatus !== tag.status ? previousStatus : 'generated';
+    let targetStatus = previousStatus && previousStatus !== tag.status ? previousStatus : 'generated';
+    if (targetStatus === tag.status || targetStatus === 'in_stock') {
+      targetStatus = 'generated';
+    }
 
     const { data: updatedTag, error: updateErr } = await supabase
       .from('tags')
