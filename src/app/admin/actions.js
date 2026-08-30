@@ -579,8 +579,8 @@ export async function getInStockCodesForSku(skuId) {
     const { data: ledgerEntries } = await supabase
       .from('inventory_ledger')
       .select('created_at, notes')
-      .eq('sku_id', skuId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(5000);
 
     const ledgerMap = new Map();
     if (ledgerEntries) {
