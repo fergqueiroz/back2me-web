@@ -130,8 +130,30 @@ export default function QRGeneratorPage() {
     e.preventDefault();
     if (!scanInput.trim() || scanLoading) return;
     
-    const codeToScan = scanInput.trim();
+    let rawInput = scanInput.trim();
+    if (rawInput.includes('/scan/')) {
+      rawInput = rawInput.split('/scan/').pop().split('/')[0];
+    }
+    const codeToScan = rawInput.toUpperCase();
     const targetStatus = activeTab === 'in_stock_scanner' ? 'in_stock' : 'sold';
+
+    // Prevent duplicate scans in the current scanner session
+    const alreadyScannedInSession = scanLogs.some(l => l.code.toUpperCase() === codeToScan && l.success);
+    if (alreadyScannedInSession) {
+      playBeep(250, 'sawtooth', 0.3); // Low error tone
+      const dupLog = {
+        id: Date.now(),
+        code: codeToScan,
+        time: new Date().toLocaleTimeString('pt-BR'),
+        success: false,
+        error: '⚠️ Bipe duplicado ignorado! Este código já foi escaneado nesta sessão.'
+      };
+      setScanLogs(prev => [dupLog, ...prev]);
+      setScanInput('');
+      setTimeout(() => scannerInputRef.current?.focus(), 50);
+      return;
+    }
+
     setScanLoading(true);
 
     const res = await scanAndUpdateTagStatus(codeToScan, targetStatus, selectedSkuId || null);

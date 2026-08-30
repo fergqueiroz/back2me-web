@@ -483,6 +483,11 @@ export async function scanAndUpdateTagStatus(scannedText, targetStatus, skuId = 
       throw new Error(`Tag "${identifier}" not found in database.`);
     }
 
+    if (tag.status === targetStatus) {
+      const statusLabel = targetStatus === 'in_stock' ? 'In Stock' : targetStatus === 'sold' ? 'Sold' : targetStatus;
+      throw new Error(`Código "${tag.qr_code}" já está com status "${statusLabel}". Bipe duplicado ignorado.`);
+    }
+
     const previousStatus = tag.status;
     let updateFields = { status: targetStatus };
     let selectedSku = null;
