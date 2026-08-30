@@ -606,3 +606,53 @@ export async function getInStockCodesForSku(skuId) {
     return { error: err.message, tags: [] };
   }
 }
+
+/**
+ * Reverts a scanned tag's status back to its previous status (or 'generated')
+ * and re-syncs inventory stock levels automatically.
+ */
+export async function revertOrDeleteScannedTag(identifier, previousStatus) {
+  const supabase = createAdminClient();
+
+  try {
+    const adminProfile = await requireAdminAuth();
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
+
+    const { data: tag, error: fetchErr } = isUuid
+      ? await supabase.from('tags').select('*').eq('id', identifier).single()
+      : await supabase.from('tags').select('*').eq('qr_code', identifier).single();
+
+    if (fetchErr || !tag) throw new Error(`Tag "${identifier}" not found.`);
+
+    const targetStatus = previousStatus && previousStatus !== tag.status ? previousStatus : 'generated';
+
+    const { data: updatedTag, error: updateErr } = await supabase
+      .from('tags')
+      .update({ status: targetStatus })
+      .eq('id', tag.id)
+      .select('id, qr_code, status')
+      .single();
+
+    if (updateErr) throw updateErr;
+
+    // Log deletion/reversion in ledger
+    await supabase.from('inventory_ledger').insert({
+      admin_id: adminProfile.id,
+      action_type: 'manual_adjustment',
+      qty_change: -1,
+      notes: `Reverted/deleted scan for tag ${tag.qr_code} back to status: ${targetStatus}`
+    });
+
+    // Re-sync stock levels
+    await syncInventoryStockFromTags();
+
+    revalidatePath('/admin/tags');
+    revalidatePath('/admin/qr-generator');
+    revalidatePath('/admin/inventory');
+
+    return { success: true, tag: updatedTag, restoredStatus: targetStatus };
+  } catch (err) {
+    console.error('revertOrDeleteScannedTag error:', err);
+    return { error: err.message };
+  }
+}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { generateQRTags, getQRGeneratorHistory, updateTagStatusBulk, scanAndUpdateTagStatus } from '../actions';
+import { generateQRTags, getQRGeneratorHistory, updateTagStatusBulk, scanAndUpdateTagStatus, revertOrDeleteScannedTag } from '../actions';
 import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@/lib/supabase/client';
 
@@ -166,6 +166,20 @@ export default function QRGeneratorPage() {
     setScanInput('');
     setScanLoading(false);
     setTimeout(() => scannerInputRef.current?.focus(), 50);
+  };
+
+  const handleUndoScan = async (log) => {
+    if (!confirm(`Deseja cancelar o bipe e remover o código ${log.code} da contagem de estoque?`)) return;
+
+    const res = await revertOrDeleteScannedTag(log.code, log.prevStatus);
+    if (res.success) {
+      playBeep(440, 'sawtooth', 0.2);
+      setScanLogs(prev => prev.filter(l => l.id !== log.id));
+      setHistory(prev => prev.map(t => t.qr_code === log.code ? { ...t, status: res.restoredStatus } : t));
+      fetchHistory();
+    } else {
+      alert(`Erro ao desfazer bipe: ${res.error}`);
+    }
   };
 
   const filteredHistory = history.filter((item) => {
@@ -616,6 +630,7 @@ export default function QRGeneratorPage() {
                       <th style={{ padding: '8px 12px' }}>Código QR</th>
                       <th style={{ padding: '8px 12px' }}>Status Atualizado</th>
                       <th style={{ padding: '8px 12px' }}>Resultado</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'right' }}>Ação</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -632,6 +647,26 @@ export default function QRGeneratorPage() {
                         </td>
                         <td style={{ padding: '8px 12px', fontWeight: '600', color: log.success ? '#16a34a' : '#dc2626' }}>
                           {log.success ? '✅ Atualizado com Sucesso' : `❌ ${log.error}`}
+                        </td>
+                        <td style={{ padding: '8px 12px', textAlign: 'right' }}>
+                          {log.success && (
+                            <button
+                              onClick={() => handleUndoScan(log)}
+                              title="Remover bipe e desfazer entrada no estoque"
+                              style={{
+                                padding: '4px 10px',
+                                fontSize: '11px',
+                                fontWeight: '700',
+                                color: '#dc2626',
+                                background: '#fef2f2',
+                                border: '1px solid #fca5a5',
+                                borderRadius: '6px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              🗑️ Apagar / Desfazer
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
