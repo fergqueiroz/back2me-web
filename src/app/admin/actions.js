@@ -484,7 +484,7 @@ export async function scanAndUpdateTagStatus(scannedText, targetStatus, skuId = 
     }
 
     const previousStatus = tag.status;
-    let updateFields = { status: targetStatus };
+    let updateFields = { status: targetStatus, updated_at: new Date().toISOString() };
     let selectedSku = null;
 
     if (skuId) {
@@ -501,7 +501,7 @@ export async function scanAndUpdateTagStatus(scannedText, targetStatus, skuId = 
       .from('tags')
       .update(updateFields)
       .eq('id', tag.id)
-      .select('id, qr_code, type, color, size, status, created_at')
+      .select('id, qr_code, type, color, size, status, created_at, updated_at')
       .single();
 
     if (updateErr) throw updateErr;
@@ -547,7 +547,8 @@ export async function scanAndUpdateTagStatus(scannedText, targetStatus, skuId = 
 }
 
 /**
- * Fetches all tags with status 'in_stock' belonging to a specific SKU.
+ * Fetches all tags with status 'in_stock' belonging to a specific SKU,
+ * including both creation timestamp and in-stock entry timestamp.
  */
 export async function getInStockCodesForSku(skuId) {
   const supabase = createAdminClient();
@@ -559,7 +560,7 @@ export async function getInStockCodesForSku(skuId) {
 
     let query = supabase
       .from('tags')
-      .select('id, qr_code, type, color, size, status, created_at')
+      .select('id, qr_code, type, color, size, status, created_at, updated_at')
       .eq('type', sku.type)
       .eq('color', sku.color)
       .eq('status', 'in_stock')
@@ -574,7 +575,32 @@ export async function getInStockCodesForSku(skuId) {
     const { data: tags, error: fetchErr } = await query;
     if (fetchErr) throw fetchErr;
 
-    return { success: true, tags: tags || [], sku };
+    // Fetch inventory ledger entries to find exact scan-in timestamp for each tag
+    const { data: ledgerEntries } = await supabase
+      .from('inventory_ledger')
+      .select('created_at, notes')
+      .eq('sku_id', skuId)
+      .order('created_at', { ascending: false });
+
+    const ledgerMap = new Map();
+    if (ledgerEntries) {
+      for (const entry of ledgerEntries) {
+        if (entry.notes) {
+          (tags || []).forEach(tag => {
+            if (entry.notes.includes(tag.qr_code) && !ledgerMap.has(tag.qr_code)) {
+              ledgerMap.set(tag.qr_code, entry.created_at);
+            }
+          });
+        }
+      }
+    }
+
+    const enrichedTags = (tags || []).map(tag => ({
+      ...tag,
+      in_stock_at: ledgerMap.get(tag.qr_code) || tag.updated_at || tag.created_at
+    }));
+
+    return { success: true, tags: enrichedTags, sku };
   } catch (err) {
     console.error('getInStockCodesForSku error:', err);
     return { error: err.message, tags: [] };

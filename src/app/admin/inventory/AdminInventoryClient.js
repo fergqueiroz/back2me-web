@@ -39,7 +39,7 @@ export function SkuStockCodesModal({ sku, onClose }) {
 
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
-      <div className="admin-card" style={{ width: '100%', maxWidth: '650px', backgroundColor: '#fff', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', maxHeight: '90vh', display: 'flex', flexDirection: 'column', padding: '24px' }}>
+      <div className="admin-card" style={{ width: '100%', maxWidth: '780px', backgroundColor: '#fff', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', maxHeight: '90vh', display: 'flex', flexDirection: 'column', padding: '24px' }}>
         
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
@@ -92,6 +92,7 @@ export function SkuStockCodesModal({ sku, onClose }) {
                   <th style={{ padding: '10px 14px' }}>#</th>
                   <th style={{ padding: '10px 14px' }}>Código QR</th>
                   <th style={{ padding: '10px 14px' }}>Data de Criação</th>
+                  <th style={{ padding: '10px 14px' }}>Entrada em Estoque (In Stock)</th>
                   <th style={{ padding: '10px 14px', textAlign: 'right' }}>Ações</th>
                 </tr>
               </thead>
@@ -104,6 +105,9 @@ export function SkuStockCodesModal({ sku, onClose }) {
                     </td>
                     <td style={{ padding: '10px 14px', color: '#64748b', fontSize: '12px' }}>
                       {new Date(tag.created_at).toLocaleDateString('pt-BR')} {new Date(tag.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    </td>
+                    <td style={{ padding: '10px 14px', color: '#065f46', fontWeight: '600', fontSize: '12px' }}>
+                      📦 {tag.in_stock_at ? `${new Date(tag.in_stock_at).toLocaleDateString('pt-BR')} ${new Date(tag.in_stock_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : '-'}
                     </td>
                     <td style={{ padding: '10px 14px', textAlign: 'right' }}>
                       <button
