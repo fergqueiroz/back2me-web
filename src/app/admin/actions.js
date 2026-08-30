@@ -545,3 +545,38 @@ export async function scanAndUpdateTagStatus(scannedText, targetStatus, skuId = 
     return { error: errorMsg };
   }
 }
+
+/**
+ * Fetches all tags with status 'in_stock' belonging to a specific SKU.
+ */
+export async function getInStockCodesForSku(skuId) {
+  const supabase = createAdminClient();
+
+  try {
+    await requireAdminAuth();
+    const { data: sku, error: skuErr } = await supabase.from('inventory_skus').select('*').eq('id', skuId).single();
+    if (skuErr || !sku) throw new Error("SKU not found.");
+
+    let query = supabase
+      .from('tags')
+      .select('id, qr_code, type, color, size, status, created_at')
+      .eq('type', sku.type)
+      .eq('color', sku.color)
+      .eq('status', 'in_stock')
+      .order('created_at', { ascending: false });
+
+    if (sku.size) {
+      query = query.eq('size', sku.size);
+    } else {
+      query = query.is('size', null);
+    }
+
+    const { data: tags, error: fetchErr } = await query;
+    if (fetchErr) throw fetchErr;
+
+    return { success: true, tags: tags || [], sku };
+  } catch (err) {
+    console.error('getInStockCodesForSku error:', err);
+    return { error: err.message, tags: [] };
+  }
+}
