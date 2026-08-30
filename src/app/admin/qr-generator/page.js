@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { generateQRTags, getQRGeneratorHistory, updateTagStatusBulk, scanAndUpdateTagStatus } from '../actions';
 import { QRCodeSVG } from 'qrcode.react';
+import { createClient } from '@/lib/supabase/client';
 
 const STATUS_CONFIG = {
   unregistered: { label: 'Generated', color: '#1e40af', bg: '#dbeafe', icon: '⚡' },
@@ -17,6 +18,8 @@ export default function QRGeneratorPage() {
   const [loading, setLoading] = useState(false);
   const [tags, setTags] = useState([]);
   const [history, setHistory] = useState([]);
+  const [skus, setSkus] = useState([]);
+  const [selectedSkuId, setSelectedSkuId] = useState('');
   const [historyLoading, setHistoryLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('generator'); // 'generator' | 'history' | 'in_stock_scanner' | 'sold_scanner'
@@ -24,6 +27,7 @@ export default function QRGeneratorPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedHistoryTags, setSelectedHistoryTags] = useState([]);
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const supabase = createClient();
 
   // Scanner state
   const [scanInput, setScanInput] = useState('');
@@ -43,9 +47,18 @@ export default function QRGeneratorPage() {
 
   const fetchHistory = async () => {
     setHistoryLoading(true);
-    const res = await getQRGeneratorHistory(2000);
+    const [res, skusRes] = await Promise.all([
+      getQRGeneratorHistory(2000),
+      supabase.from('inventory_skus').select('*').order('name', { ascending: true })
+    ]);
     if (res.tags) {
       setHistory(res.tags);
+    }
+    if (skusRes.data) {
+      setSkus(skusRes.data);
+      if (skusRes.data.length > 0 && !selectedSkuId) {
+        setSelectedSkuId(skusRes.data[0].id);
+      }
     }
     setHistoryLoading(false);
   };
@@ -121,7 +134,7 @@ export default function QRGeneratorPage() {
     const targetStatus = activeTab === 'in_stock_scanner' ? 'in_stock' : 'sold';
     setScanLoading(true);
 
-    const res = await scanAndUpdateTagStatus(codeToScan, targetStatus);
+    const res = await scanAndUpdateTagStatus(codeToScan, targetStatus, selectedSkuId || null);
 
     if (res.success && res.tag) {
       playBeep(1046.5, 'sine', 0.12); // High C sound for success scan
@@ -513,6 +526,36 @@ export default function QRGeneratorPage() {
                   Use um leitor de código de barras USB/Bluetooth ou digite o código QR. O status é alterado instantaneamente a cada bipe.
                 </p>
               </div>
+            </div>
+            {/* SKU Selector Dropdown */}
+            <div style={{ marginBottom: '20px', background: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#0f172a', marginBottom: '8px' }}>
+                🏷️ Selecione o Produto que você está escaneando:
+              </label>
+              <select
+                value={selectedSkuId}
+                onChange={(e) => setSelectedSkuId(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  borderRadius: '8px',
+                  border: '2px solid #0f172a',
+                  background: '#ffffff',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  color: '#0f172a'
+                }}
+              >
+                <option value="">-- Selecione o item (ex: Blue Wristband, Orange Pet Tag...) --</option>
+                {skus.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.stock_level || 0} em estoque pronto)
+                  </option>
+                ))}
+              </select>
+              <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#64748b' }}>
+                O produto selecionado definirá as especificações da tag e atualizará a contagem do Merchandise Inventory automaticamente.
+              </p>
             </div>
 
             <form onSubmit={handleFastScannerSubmit} style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>

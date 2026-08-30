@@ -401,13 +401,63 @@ export async function updateTagStatusBulk(tagIds, newStatus) {
 }
 
 /**
- * Scans a single QR code or URL and updates its status (e.g. for fast scanner in_stock / sold checking).
+ * Syncs all SKU stock_levels and sold_levels in inventory_skus based on actual tag status counts in `tags` table.
  */
-export async function scanAndUpdateTagStatus(scannedText, targetStatus) {
+export async function syncInventoryStockFromTags() {
   const supabase = createAdminClient();
 
   try {
-    await requireAdminAuth();
+    const { data: skus } = await supabase.from('inventory_skus').select('*');
+    if (!skus) return;
+
+    for (const sku of skus) {
+      let inStockQuery = supabase
+        .from('tags')
+        .select('id', { count: 'exact', head: true })
+        .eq('type', sku.type)
+        .eq('color', sku.color)
+        .eq('status', 'in_stock');
+
+      if (sku.size) {
+        inStockQuery = inStockQuery.eq('size', sku.size);
+      } else {
+        inStockQuery = inStockQuery.is('size', null);
+      }
+      const { count: inStockCount } = await inStockQuery;
+
+      let soldQuery = supabase
+        .from('tags')
+        .select('id', { count: 'exact', head: true })
+        .eq('type', sku.type)
+        .eq('color', sku.color)
+        .in('status', ['sold', 'active']);
+
+      if (sku.size) {
+        soldQuery = soldQuery.eq('size', sku.size);
+      } else {
+        soldQuery = soldQuery.is('size', null);
+      }
+      const { count: soldCount } = await soldQuery;
+
+      await supabase.from('inventory_skus').update({
+        stock_level: inStockCount || 0,
+        sold_level: soldCount || 0,
+        updated_at: new Date().toISOString()
+      }).eq('id', sku.id);
+    }
+  } catch (err) {
+    console.error('syncInventoryStockFromTags error:', err);
+  }
+}
+
+/**
+ * Scans a single QR code or URL and updates its status (e.g. for fast scanner in_stock / sold checking).
+ */
+export async function scanAndUpdateTagStatus(scannedText, targetStatus, skuId = null) {
+  const supabase = createAdminClient();
+
+  try {
+    const adminProfile = await requireAdminAuth();
     const validStatuses = ['generated', 'unregistered', 'manufactured', 'in_stock', 'sold', 'active'];
     if (!validStatuses.includes(targetStatus)) {
       throw new Error(`Invalid target status: ${targetStatus}`);
@@ -424,7 +474,7 @@ export async function scanAndUpdateTagStatus(scannedText, targetStatus) {
 
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
 
-    const query = supabase.from('tags').select('id, qr_code, type, status, assigned_to');
+    const query = supabase.from('tags').select('id, qr_code, type, color, size, status, assigned_to');
     const { data: tag, error: fetchErr } = isUuid
       ? await query.eq('id', identifier).maybeSingle()
       : await query.eq('qr_code', identifier).maybeSingle();
@@ -434,23 +484,57 @@ export async function scanAndUpdateTagStatus(scannedText, targetStatus) {
     }
 
     const previousStatus = tag.status;
+    let updateFields = { status: targetStatus };
+    let selectedSku = null;
+
+    if (skuId) {
+      const { data: skuData } = await supabase.from('inventory_skus').select('*').eq('id', skuId).single();
+      if (skuData) {
+        selectedSku = skuData;
+        updateFields.type = skuData.type;
+        updateFields.color = skuData.color;
+        updateFields.size = skuData.size;
+      }
+    }
 
     const { data: updatedTag, error: updateErr } = await supabase
       .from('tags')
-      .update({ status: targetStatus })
+      .update(updateFields)
       .eq('id', tag.id)
-      .select('id, qr_code, type, status, created_at')
+      .select('id, qr_code, type, color, size, status, created_at')
       .single();
 
     if (updateErr) throw updateErr;
 
+    // Write Ledger Log if SKU was selected
+    if (selectedSku) {
+      const isAdd = targetStatus === 'in_stock';
+      const actionType = isAdd ? 'production_add' : 'sold_deduction';
+      const qtyChange = isAdd ? 1 : -1;
+
+      await supabase.from('inventory_ledger').insert({
+        sku_id: selectedSku.id,
+        admin_id: adminProfile.id,
+        action_type: actionType,
+        qty_change: qtyChange,
+        previous_stock: selectedSku.stock_level,
+        new_stock: Math.max(0, selectedSku.stock_level + qtyChange),
+        notes: `Scanned tag ${updatedTag.qr_code} into status: ${targetStatus}`
+      });
+    }
+
+    // Sync inventory stock levels automatically
+    await syncInventoryStockFromTags();
+
     revalidatePath('/admin/tags');
     revalidatePath('/admin/qr-generator');
+    revalidatePath('/admin/inventory');
 
     return {
       success: true,
       tag: updatedTag,
-      previousStatus
+      previousStatus,
+      sku: selectedSku
     };
   } catch (err) {
     console.error('scanAndUpdateTagStatus error:', err);

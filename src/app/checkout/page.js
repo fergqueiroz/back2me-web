@@ -27,8 +27,27 @@ function CheckoutContent() {
   const [stripeError, setStripeError] = useState('');
   const [loadingPayment, setLoadingPayment] = useState(false);
 
+  const [stock, setStock] = useState({
+    wristband_orange: 0,
+    wristband_navy: 0,
+    pettag_orange: 0,
+    pettag_navy: 0,
+    luggagetag_orange: 0,
+    luggagetag_navy: 0,
+    sticker_orange_small: 0,
+    sticker_orange_large: 0,
+    sticker_navy_small: 0,
+    sticker_navy_large: 0,
+  });
+
   useEffect(() => {
     setMounted(true);
+    fetch('/api/inventory/stock')
+      .then(res => res.json())
+      .then(data => {
+        if (data?.stock) setStock(data.stock);
+      })
+      .catch(console.error);
   }, []);
 
   const planData = {
@@ -53,10 +72,19 @@ function CheckoutContent() {
   });
 
   const updateQty = (id, delta) => {
-    setQuantities(prev => ({
-      ...prev,
-      [id]: Math.max(0, prev[id] + delta)
-    }));
+    const maxAvailable = stock[id] ?? 0;
+    setQuantities(prev => {
+      const currentVal = prev[id] || 0;
+      const newVal = currentVal + delta;
+      if (newVal > maxAvailable) {
+        alert(`This item is currently sold out or has reached available stock (${maxAvailable} available).`);
+        return prev;
+      }
+      return {
+        ...prev,
+        [id]: Math.max(0, newVal)
+      };
+    });
   };
 
   const selectedItems = [
@@ -120,6 +148,14 @@ function CheckoutContent() {
   const ProductCard = ({ title, type, id_orange, id_navy, price, hasSizes, id_orange_l, id_navy_l, imageNavy, imageOrange }) => {
     const [hoveredColor, setHoveredColor] = useState(null); // 'navy' or 'orange'
 
+    const renderStockBadge = (itemId) => {
+      const avail = stock[itemId] ?? 0;
+      if (avail <= 0) {
+        return <span style={{ padding: '2px 8px', borderRadius: '10px', background: '#fee2e2', color: '#b91c1c', fontSize: '11px', fontWeight: 'bold', marginLeft: '6px' }}>SOLD OUT</span>;
+      }
+      return null;
+    };
+
     return (
       <div className="checkout-product-card">
         <div className="product-visual-group">
@@ -147,27 +183,27 @@ function CheckoutContent() {
             onMouseEnter={() => setHoveredColor('orange')}
             onMouseLeave={() => setHoveredColor(null)}
           >
-            <label>Vibrant Orange</label>
+            <label>Vibrant Orange {!hasSizes && renderStockBadge(id_orange)}</label>
             {hasSizes ? (
               <div className="size-selectors">
                 <div className="qty-control">
-                  <span>1x1 in:</span>
+                  <span>1x1 in: {renderStockBadge(id_orange)}</span>
                   <button onClick={() => updateQty(id_orange, -1)}>-</button>
                   <input type="number" value={quantities[id_orange]} readOnly />
-                  <button onClick={() => updateQty(id_orange, 1)}>+</button>
+                  <button onClick={() => updateQty(id_orange, 1)} disabled={(stock[id_orange] ?? 0) <= 0 || quantities[id_orange] >= (stock[id_orange] ?? 0)}>+</button>
                 </div>
                 <div className="qty-control">
-                  <span>2x2 in:</span>
+                  <span>2x2 in: {renderStockBadge(id_orange_l)}</span>
                   <button onClick={() => updateQty(id_orange_l, -1)}>-</button>
                   <input type="number" value={quantities[id_orange_l]} readOnly />
-                  <button onClick={() => updateQty(id_orange_l, 1)}>+</button>
+                  <button onClick={() => updateQty(id_orange_l, 1)} disabled={(stock[id_orange_l] ?? 0) <= 0 || quantities[id_orange_l] >= (stock[id_orange_l] ?? 0)}>+</button>
                 </div>
               </div>
             ) : (
               <div className="qty-control">
                 <button onClick={() => updateQty(id_orange, -1)}>-</button>
                 <input type="number" value={quantities[id_orange]} readOnly />
-                <button onClick={() => updateQty(id_orange, 1)}>+</button>
+                <button onClick={() => updateQty(id_orange, 1)} disabled={(stock[id_orange] ?? 0) <= 0 || quantities[id_orange] >= (stock[id_orange] ?? 0)}>+</button>
               </div>
             )}
           </div>
@@ -177,27 +213,27 @@ function CheckoutContent() {
             onMouseEnter={() => setHoveredColor('navy')}
             onMouseLeave={() => setHoveredColor(null)}
           >
-            <label>Navy Blue</label>
+            <label>Navy Blue {!hasSizes && renderStockBadge(id_navy)}</label>
             {hasSizes ? (
               <div className="size-selectors">
                 <div className="qty-control">
-                  <span>1x1 in:</span>
+                  <span>1x1 in: {renderStockBadge(id_navy)}</span>
                   <button onClick={() => updateQty(id_navy, -1)}>-</button>
                   <input type="number" value={quantities[id_navy]} readOnly />
-                  <button onClick={() => updateQty(id_navy, 1)}>+</button>
+                  <button onClick={() => updateQty(id_navy, 1)} disabled={(stock[id_navy] ?? 0) <= 0 || quantities[id_navy] >= (stock[id_navy] ?? 0)}>+</button>
                 </div>
                 <div className="qty-control">
-                  <span>2x2 in:</span>
+                  <span>2x2 in: {renderStockBadge(id_navy_l)}</span>
                   <button onClick={() => updateQty(id_navy_l, -1)}>-</button>
                   <input type="number" value={quantities[id_navy_l]} readOnly />
-                  <button onClick={() => updateQty(id_navy_l, 1)}>+</button>
+                  <button onClick={() => updateQty(id_navy_l, 1)} disabled={(stock[id_navy_l] ?? 0) <= 0 || quantities[id_navy_l] >= (stock[id_navy_l] ?? 0)}>+</button>
                 </div>
               </div>
             ) : (
               <div className="qty-control">
                 <button onClick={() => updateQty(id_navy, -1)}>-</button>
                 <input type="number" value={quantities[id_navy]} readOnly />
-                <button onClick={() => updateQty(id_navy, 1)}>+</button>
+                <button onClick={() => updateQty(id_navy, 1)} disabled={(stock[id_navy] ?? 0) <= 0 || quantities[id_navy] >= (stock[id_navy] ?? 0)}>+</button>
               </div>
             )}
           </div>

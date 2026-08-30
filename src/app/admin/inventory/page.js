@@ -1,8 +1,12 @@
 import { createAdminClient } from '@/lib/supabase/server';
 import { InventoryManagerGrid } from './AdminInventoryClient';
+import { syncInventoryStockFromTags } from '../actions';
 
 export default async function AdminInventoryPage() {
   const supabase = createAdminClient();
+
+  // Auto-sync inventory stock levels from physical tags in_stock
+  await syncInventoryStockFromTags();
 
   // 1. Fetch SKUs
   const { data: skus, error: skuErr } = await supabase
