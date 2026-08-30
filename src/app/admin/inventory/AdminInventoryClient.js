@@ -266,32 +266,16 @@ export function InventoryManagerGrid({ skus }) {
                     <td style={{ fontWeight: '500' }}>{s.name}</td>
                     <td style={{ color: '#059669', fontWeight: 'bold' }}>{s.sold_level || 0}</td>
                     <td>
-                      <button
-                        onClick={() => setSelectedStockCodesSku(s)}
-                        title="Clique para ver os códigos QR em estoque"
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          padding: 0,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px'
-                        }}
-                      >
-                        <span style={{ 
-                          padding: '4px 10px', 
-                          borderRadius: '12px', 
-                          fontSize: '13px',
-                          fontWeight: 'bold',
-                          backgroundColor: s.stock_level < 20 ? '#fee2e2' : '#d1fae5',
-                          color: s.stock_level < 20 ? '#b91c1c' : '#065f46',
-                          border: '1px solid transparent',
-                          transition: 'all 0.2s'
-                        }}>
-                          📦 {s.stock_level} em estoque (Ver Códigos 🔍)
-                        </span>
-                      </button>
+                      <span style={{ 
+                        padding: '4px 8px', 
+                        borderRadius: '12px', 
+                        fontSize: '13px',
+                        fontWeight: 'bold',
+                        backgroundColor: s.stock_level < 20 ? '#fee2e2' : '#f3f4f6',
+                        color: s.stock_level < 20 ? '#b91c1c' : '#1f2937'
+                      }}>
+                        {s.stock_level}
+                      </span>
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '8px' }}>
@@ -299,7 +283,7 @@ export function InventoryManagerGrid({ skus }) {
                           onClick={() => setSelectedStockCodesSku(s)}
                           style={{ padding: '4px 10px', fontSize: '12px', background: '#eff6ff', border: '1px solid #93c5fd', color: '#1d4ed8', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}
                         >
-                          🔍 Ver Códigos
+                          See codes
                         </button>
                         <button 
                           onClick={() => setEditingSku(s)}
