@@ -484,7 +484,7 @@ export async function scanAndUpdateTagStatus(scannedText, targetStatus, skuId = 
     }
 
     const previousStatus = tag.status;
-    let updateFields = { status: targetStatus, updated_at: new Date().toISOString() };
+    let updateFields = { status: targetStatus };
     let selectedSku = null;
 
     if (skuId) {
@@ -501,7 +501,7 @@ export async function scanAndUpdateTagStatus(scannedText, targetStatus, skuId = 
       .from('tags')
       .update(updateFields)
       .eq('id', tag.id)
-      .select('id, qr_code, type, color, size, status, created_at, updated_at')
+      .select('id, qr_code, type, color, size, status, created_at')
       .single();
 
     if (updateErr) throw updateErr;
@@ -560,7 +560,7 @@ export async function getInStockCodesForSku(skuId) {
 
     let query = supabase
       .from('tags')
-      .select('id, qr_code, type, color, size, status, created_at, updated_at')
+      .select('id, qr_code, type, color, size, status, created_at')
       .eq('type', sku.type)
       .eq('color', sku.color)
       .eq('status', 'in_stock')
@@ -597,7 +597,7 @@ export async function getInStockCodesForSku(skuId) {
 
     const enrichedTags = (tags || []).map(tag => ({
       ...tag,
-      in_stock_at: ledgerMap.get(tag.qr_code) || tag.updated_at || tag.created_at
+      in_stock_at: ledgerMap.get(tag.qr_code) || tag.created_at
     }));
 
     return { success: true, tags: enrichedTags, sku };
