@@ -186,7 +186,7 @@ export default function DashboardPage() {
                   <span className="dash-tag-type">{tag.type.replace('_', ' ')} · {tag.color}</span>
                   <span className="dash-tag-qr">{tag.qr_code}</span>
                 </div>
-                <div className={`dash-tag-status ${tag.status}`}>●</div>
+                <div className={`dash-tag-status ${tag.status === 'active' ? 'active' : 'inactive'}`}>● {tag.status === 'active' ? 'Active' : 'Inactive'}</div>
               </Link>
             ))}
             {activeTags.length < tagLimit && (

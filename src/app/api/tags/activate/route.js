@@ -32,7 +32,8 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid QR Code. Please check the code on your tag.' }, { status: 404 });
     }
 
-    if (tag.status !== 'unregistered') {
+    const unactivatedStatuses = ['unregistered', 'generated', 'manufactured', 'in_stock', 'sold'];
+    if (!unactivatedStatuses.includes(tag.status)) {
       return NextResponse.json({ error: 'This tag has already been activated.' }, { status: 400 });
     }
 

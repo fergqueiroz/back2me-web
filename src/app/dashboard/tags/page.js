@@ -130,7 +130,7 @@ export default function TagsPage() {
                   />
                 </div>
                 <div className={`dash-stat-status ${tag.status === 'active' ? 'active' : 'warning'}`} style={{ position: 'relative', top: 0, right: 0 }}>
-                  {tag.status}
+                  {tag.status === 'active' ? 'Active' : 'Inactive'}
                 </div>
               </div>
               

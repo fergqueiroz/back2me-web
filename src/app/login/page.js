@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [mode, setMode] = useState('signin'); // 'signin' | 'signup' | 'magiclink'
@@ -16,6 +16,8 @@ export default function LoginPage() {
 
   const supabase = createClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextUrl = searchParams.get('next') || searchParams.get('redirectTo') || '/dashboard';
 
   const handleAuth = async (e) => {
     e.preventDefault();
@@ -65,7 +67,7 @@ export default function LoginPage() {
             .is('converted_user_id', null);
         }
 
-        router.push('/dashboard');
+        router.push(nextUrl);
       }
     } catch (err) {
       setError(err.message);
@@ -238,5 +240,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }

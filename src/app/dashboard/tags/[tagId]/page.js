@@ -186,7 +186,7 @@ export default function TagDetailPage() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <span className={`dash-stat-status ${tag.status === 'active' ? 'active' : 'warning'}`} style={{ position: 'static' }}>
-            {tag.status}
+            {tag.status === 'active' ? 'Active' : 'Inactive'}
           </span>
           <Link href={`/scan/${tag.id}`} target="_blank" className="btn btn-outline" style={{ padding: '8px 16px', fontSize: '0.8rem' }}>
             Preview Public Page

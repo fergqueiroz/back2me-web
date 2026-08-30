@@ -1,18 +1,19 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useRef, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import QRScanner from './QRScanner';
 
-export default function ActivateTagPage() {
+function ActivateForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const fileInputRef = useRef(null);
   const supabase = createClient();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showScanner, setShowScanner] = useState(false);
+  const [showScanner, setShowScanner] = useState(true);
   
   const [formData, setFormData] = useState({
     qrCode: '',
@@ -25,7 +26,14 @@ export default function ActivateTagPage() {
   const [photoPreview, setPhotoPreview] = useState(null);
   const [photoFile, setPhotoFile] = useState(null);
 
-  // Inside component, just below state definitions
+  // Check URL query parameters for pre-scanned QR code or Tag ID
+  useEffect(() => {
+    const codeFromUrl = searchParams.get('code') || searchParams.get('qrCode') || searchParams.get('qr_code') || searchParams.get('id');
+    if (codeFromUrl) {
+      handleLookupOrSetCode(codeFromUrl);
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     async function fetchPhone() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -39,30 +47,34 @@ export default function ActivateTagPage() {
     fetchPhone();
   }, []);
 
+  const handleLookupOrSetCode = async (rawCode) => {
+    let cleanCode = rawCode.trim();
+    if (cleanCode.includes('/scan/')) {
+      cleanCode = cleanCode.split('/scan/').pop().split('/')[0];
+    }
+    
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanCode);
+    if (isUuid) {
+      const { data } = await supabase.from('tags').select('qr_code').eq('id', cleanCode).single();
+      if (data?.qr_code) {
+        setFormData(prev => ({ ...prev, qrCode: data.qr_code }));
+        setShowScanner(false);
+        setError('');
+        return;
+      }
+    }
+    
+    setFormData(prev => ({ ...prev, qrCode: cleanCode.toUpperCase() }));
+    setShowScanner(false);
+    setError('');
+  };
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleScan = async (decodedText) => {
-    setShowScanner(false);
-    
-    // Check if it's a URL (e.g. https://www.back2meglobal.com/scan/<uuid>)
-    if (decodedText.includes('/scan/')) {
-      const parts = decodedText.split('/scan/');
-      const uuid = parts[parts.length - 1];
-      
-      // Look up qr_code string from uuid
-      const { data, error: lookupError } = await supabase.from('tags').select('qr_code').eq('id', uuid).single();
-      if (data?.qr_code) {
-        setFormData(prev => ({ ...prev, qrCode: data.qr_code }));
-        setError(''); // Clear any previous errors
-      } else {
-        setError('Invalid or unrecognized QR Code.');
-      }
-    } else {
-      // Fallback: assume it's the raw text code
-      setFormData(prev => ({ ...prev, qrCode: decodedText }));
-    }
+    handleLookupOrSetCode(decodedText);
   };
 
   const handlePhotoSelect = (e) => {
@@ -84,13 +96,16 @@ export default function ActivateTagPage() {
 
   const handleActivate = async (e) => {
     e.preventDefault();
+    if (!formData.qrCode) {
+      setError('Por favor, escaneie a sua tag física antes de prosseguir.');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
-    // Phone format validation & cleanup
     let cleanedPhone = formData.phone.replace(/[\s\-\(\)]/g, '');
     
-    // Auto-prepend + if missing (default to +55 for Brazil as she is likely testing from there, or force them to add country code)
     if (!cleanedPhone.startsWith('+')) {
       setError('Please include your country code starting with + (e.g., +5511999999999 for Brazil or +1 for US)');
       setLoading(false);
@@ -104,19 +119,17 @@ export default function ActivateTagPage() {
       return;
     }
     
-    // Update payload with cleaned phone
     const submitData = { ...formData, phone: cleanedPhone };
 
     try {
       let uploadedPhotoUrl = null;
 
-      // 1. Upload photo if selected
       if (photoFile) {
         const fileExt = photoFile.name.split('.').pop();
         const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
         const filePath = `${fileName}`;
 
-        const { error: uploadError, data } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('tag-photos')
           .upload(filePath, photoFile);
 
@@ -131,14 +144,12 @@ export default function ActivateTagPage() {
         uploadedPhotoUrl = publicUrlData.publicUrl;
       }
 
-      // 2. Update Profile Phone
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { error: profileErr } = await supabase.from('profiles').update({ phone: submitData.phone }).eq('id', user.id);
         if (profileErr) throw new Error('Failed to save phone number: ' + profileErr.message);
       }
 
-      // 3. Submit to API
       const res = await fetch('/api/tags/activate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -149,7 +160,6 @@ export default function ActivateTagPage() {
       
       if (!res.ok) throw new Error(data.error || 'Failed to activate tag');
 
-      // Redirect to success page
       router.push(`/dashboard/tags/success?id=${data.tag.id}&name=${encodeURIComponent(data.tag.assigned_to)}`);
 
     } catch (err) {
@@ -166,7 +176,7 @@ export default function ActivateTagPage() {
       
       <div style={{ background: '#fff', padding: '32px', borderRadius: '16px', border: '1px solid #e8ecf1' }}>
         <p style={{ color: '#555', marginBottom: '24px', lineHeight: 1.6 }}>
-          Enter the unique QR Code ID printed on your Back2Me tag. Once activated, whoever scans the tag will see the information you provide below.
+          Escaneie o código QR da sua tag física Back2Me utilizando a câmera do seu celular ou computador.
         </p>
 
         {error && (
@@ -176,37 +186,53 @@ export default function ActivateTagPage() {
         )}
 
         <form onSubmit={handleActivate} className="login-form">
-          <div className="form-group">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <label htmlFor="qrCode" style={{ margin: 0 }}>QR Code ID (e.g., B2M-WR-7X3K) *</label>
-              <button 
-                type="button" 
-                onClick={() => setShowScanner(!showScanner)}
-                style={{ background: 'none', border: 'none', color: 'var(--orange)', fontWeight: '600', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}
-              >
-                📷 Scan QR Code
-              </button>
-            </div>
-            
-            {showScanner && (
-              <QRScanner 
-                onScan={handleScan} 
-                onError={(err) => { console.warn('QR scan warning:', err) }} 
-                onClose={() => setShowScanner(false)} 
-              />
+          {/* CAMERA SCANNER AREA (NO MANUAL TEXT FIELD) */}
+          <div className="form-group" style={{ marginBottom: '24px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: '#1a2744' }}>
+              Reconhecimento da Tag Física *
+            </label>
+
+            {formData.qrCode ? (
+              <div style={{ background: '#ecfdf5', border: '2px solid #10b981', padding: '16px 20px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '1.8rem' }}>✅</span>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Tag Escaneada com Sucesso</div>
+                    <div style={{ fontSize: '1.2rem', fontFamily: 'monospace', fontWeight: '800', color: '#065f46' }}>{formData.qrCode}</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setFormData(prev => ({ ...prev, qrCode: '' })); setShowScanner(true); }}
+                  className="btn btn-outline"
+                  style={{ padding: '8px 14px', fontSize: '0.85rem', borderColor: '#10b981', color: '#047857' }}
+                >
+                  📷 Escanear Outra Tag
+                </button>
+              </div>
+            ) : (
+              <div>
+                {showScanner ? (
+                  <QRScanner 
+                    onScan={handleScan} 
+                    onError={(err) => console.warn('QR scan warning:', err)} 
+                    onClose={() => setShowScanner(false)} 
+                  />
+                ) : (
+                  <div style={{ background: '#f8fafc', padding: '24px', borderRadius: '12px', border: '2px dashed #cbd5e1', textAlign: 'center' }}>
+                    <p style={{ color: '#64748b', margin: '0 0 16px', fontSize: '0.95rem' }}>Nenhuma tag escaneada ainda.</p>
+                    <button
+                      type="button"
+                      onClick={() => setShowScanner(true)}
+                      className="btn btn-orange"
+                      style={{ padding: '10px 20px', fontSize: '0.95rem' }}
+                    >
+                      📷 Abrir Câmera para Escanear
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
-            
-            <input
-              type="text"
-              id="qrCode"
-              name="qrCode"
-              placeholder="Enter the code on your tag"
-              value={formData.qrCode}
-              onChange={handleChange}
-              required
-              autoCapitalize="characters"
-              style={{ textTransform: 'uppercase', width: '100%', padding: '12px 16px', border: '1px solid #d0d5dd', borderRadius: '10px' }}
-            />
           </div>
 
           <div className="form-group">
@@ -331,8 +357,8 @@ export default function ActivateTagPage() {
             <button 
               type="submit" 
               className="btn btn-orange" 
-              disabled={loading} 
-              style={{ minWidth: '160px' }}
+              disabled={loading || !formData.qrCode} 
+              style={{ minWidth: '160px', opacity: !formData.qrCode ? 0.6 : 1 }}
             >
               {loading ? 'Activating...' : 'Activate Tag'}
             </button>
@@ -340,5 +366,13 @@ export default function ActivateTagPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function ActivateTagPage() {
+  return (
+    <Suspense fallback={<div className="dash-loading"><div className="dash-spinner" /></div>}>
+      <ActivateForm />
+    </Suspense>
   );
 }

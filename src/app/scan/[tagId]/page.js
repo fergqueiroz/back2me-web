@@ -50,7 +50,7 @@ export default async function ScanPage({ params }) {
         <div className="scan-container text-center">
           <h2>This tag has not been activated.</h2>
           <p>If you own this tag, please log in to your dashboard to activate it.</p>
-          <Link href="/login" className="btn btn-navy">Log In to Activate</Link>
+          <Link href={`/login?next=${encodeURIComponent(`/dashboard/tags/activate?code=${tag.qr_code}`)}`} className="btn btn-navy">Log In to Activate</Link>
         </div>
       </div>
     );
