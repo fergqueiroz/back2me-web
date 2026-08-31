@@ -1,5 +1,7 @@
+import { Suspense } from "react";
 import { Inter } from "next/font/google";
 import MarketingTracker from "@/components/MarketingTracker";
+import MetaPixel from "@/components/MetaPixel";
 import "./globals.css";
 
 const inter = Inter({
@@ -23,6 +25,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={inter.variable}>
       <body>
+        <Suspense fallback={null}>
+          <MetaPixel />
+        </Suspense>
         <MarketingTracker />
         {children}
       </body>
