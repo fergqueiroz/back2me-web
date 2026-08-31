@@ -154,6 +154,19 @@ export default function ProductModal({ productKey, isOpen, onClose }) {
     setActiveImage(0);
   }, [productKey]);
 
+  const handleShopNow = (e) => {
+    e.preventDefault();
+    onClose();
+    setTimeout(() => {
+      const pricingEl = document.getElementById('pricing');
+      if (pricingEl) {
+        pricingEl.scrollIntoView({ behavior: 'smooth' });
+      } else {
+        window.location.href = '/#pricing';
+      }
+    }, 100);
+  };
+
   if (!isOpen || !product) return null;
 
   return (
@@ -213,7 +226,7 @@ export default function ProductModal({ productKey, isOpen, onClose }) {
             </div>
 
             <div className="product-modal-cta">
-              <Link href="/#pricing" onClick={onClose} className="btn btn-orange">Shop Now</Link>
+              <button onClick={handleShopNow} className="btn btn-orange">Shop Now</button>
               <span className="product-modal-note">Free shipping on orders over $15</span>
             </div>
           </div>

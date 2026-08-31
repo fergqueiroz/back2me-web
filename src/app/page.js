@@ -1,8 +1,17 @@
+'use client';
+
 import ProductsShowcase from './components/ProductsShowcase';
 import PricingGrid from './components/PricingGrid';
 import Link from 'next/link';
 
 export default function Home() {
+  const scrollToPricing = (e) => {
+    e.preventDefault();
+    const pricingEl = document.getElementById('pricing');
+    if (pricingEl) {
+      pricingEl.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
   return (
     <>
       {/* ═══════════════════════════════════════════════════════════
@@ -24,7 +33,7 @@ export default function Home() {
           <ul className="nav-links">
             <li><a href="#how-it-works">How It Works</a></li>
             <li><a href="#who-we-protect">Who We Protect</a></li>
-            <li><a href="#pricing">Plans</a></li>
+            <li><a href="#pricing" onClick={scrollToPricing}>Plans</a></li>
           </ul>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <Link href="/login" className="btn btn-orange nav-cta" id="nav-cta">
@@ -89,7 +98,7 @@ export default function Home() {
           </div>
 
           <div className="btn-group" style={{ marginTop: '48px' }}>
-            <a href="#pricing" className="btn btn-navy" id="hero-cta-primary">
+            <a href="#pricing" onClick={scrollToPricing} className="btn btn-navy" id="hero-cta-primary">
               Secure Your World Today
             </a>
           </div>
@@ -407,9 +416,9 @@ export default function Home() {
             Because you aren&apos;t just buying a tag. You&apos;re joining a global network
             dedicated to making sure that &ldquo;Lost&rdquo; is only a temporary state.
           </p>
-          <Link href="#pricing" className="btn btn-orange" id="final-cta-btn" style={{ display: 'inline-block', padding: '18px 48px', fontSize: '1.05rem' }}>
+          <button onClick={scrollToPricing} className="btn btn-orange" id="final-cta-btn" style={{ display: 'inline-block', padding: '18px 48px', fontSize: '1.05rem', border: 'none', cursor: 'pointer' }}>
             Start Your Protection Plan Now
-          </Link>
+          </button>
           <p className="final-tagline">
             <strong>Back2Me Global.</strong> Just one snap away.
           </p>
