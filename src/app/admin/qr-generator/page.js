@@ -137,16 +137,17 @@ export default function QRGeneratorPage() {
     const codeToScan = rawInput.toUpperCase();
     const targetStatus = activeTab === 'in_stock_scanner' ? 'in_stock' : 'sold';
 
-    // Prevent duplicate scans in the current scanner session
-    const alreadyScannedInSession = scanLogs.some(l => l.code.toUpperCase() === codeToScan && l.success);
+    // Prevent duplicate scans in the current scanner session for the same action
+    const alreadyScannedInSession = scanLogs.some(l => l.code.toUpperCase() === codeToScan && l.status === targetStatus && l.success);
     if (alreadyScannedInSession) {
       playBeep(250, 'sawtooth', 0.3); // Low error tone
+      const actionLabel = activeTab === 'in_stock_scanner' ? 'recebido no estoque' : 'despachado ao cliente';
       const dupLog = {
         id: Date.now(),
         code: codeToScan,
         time: new Date().toLocaleTimeString('pt-BR'),
         success: false,
-        error: '⚠️ Bipe duplicado ignorado! Este código já foi escaneado nesta sessão.'
+        error: `⚠️ Bipe duplicado ignorado! O código ${codeToScan} já foi ${actionLabel} nesta sessão.`
       };
       setScanLogs(prev => [dupLog, ...prev]);
       setScanInput('');
@@ -162,7 +163,8 @@ export default function QRGeneratorPage() {
       playBeep(1046.5, 'sine', 0.12); // High C sound for success scan
       const newLog = {
         id: Date.now(),
-        code: res.tag.qr_code,
+        tagId: res.tag.id,
+        code: res.tag.qr_code.toUpperCase(),
         type: res.tag.type,
         status: targetStatus,
         prevStatus: res.previousStatus,

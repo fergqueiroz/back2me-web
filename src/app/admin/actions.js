@@ -484,8 +484,12 @@ export async function scanAndUpdateTagStatus(scannedText, targetStatus, skuId = 
     }
 
     if (tag.status === targetStatus) {
-      const statusLabel = targetStatus === 'in_stock' ? 'In Stock' : targetStatus === 'sold' ? 'Sold' : targetStatus;
+      const statusLabel = targetStatus === 'in_stock' ? 'In Stock (Estoque)' : targetStatus === 'sold' ? 'Sold (Despachado)' : targetStatus;
       throw new Error(`Código "${tag.qr_code}" já está com status "${statusLabel}". Bipe duplicado ignorado.`);
+    }
+
+    if (targetStatus === 'sold' && tag.status === 'active') {
+      throw new Error(`Código "${tag.qr_code}" já foi ativado pelo cliente. Bipe de despacho duplicado ignorado.`);
     }
 
     const previousStatus = tag.status;
