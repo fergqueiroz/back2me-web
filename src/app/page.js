@@ -407,9 +407,9 @@ export default function Home() {
             Because you aren&apos;t just buying a tag. You&apos;re joining a global network
             dedicated to making sure that &ldquo;Lost&rdquo; is only a temporary state.
           </p>
-          <button className="btn btn-orange" id="final-cta-btn" style={{ padding: '18px 48px', fontSize: '1.05rem' }}>
-            Activate Your Protection Plan Now
-          </button>
+          <Link href="#pricing" className="btn btn-orange" id="final-cta-btn" style={{ display: 'inline-block', padding: '18px 48px', fontSize: '1.05rem' }}>
+            Start Your Protection Plan Now
+          </Link>
           <p className="final-tagline">
             <strong>Back2Me Global.</strong> Just one snap away.
           </p>

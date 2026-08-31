@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 
 const productData = {
   wristband: {
@@ -212,7 +213,7 @@ export default function ProductModal({ productKey, isOpen, onClose }) {
             </div>
 
             <div className="product-modal-cta">
-              <button className="btn btn-orange">Shop Now</button>
+              <Link href="/#pricing" onClick={onClose} className="btn btn-orange">Shop Now</Link>
               <span className="product-modal-note">Free shipping on orders over $15</span>
             </div>
           </div>
